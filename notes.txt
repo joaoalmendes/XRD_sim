@@ -1,0 +1,28 @@
+To do:
+
+- Need to had N=8 layers to include all possible shifts for the staggered Tri-H and SoD
+
+- Need to had the possibility to simulate h/k vs l planes
+
+Improvements:
+
+- Add symmetry related operations to save calculation time in the diffraction pattern
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
