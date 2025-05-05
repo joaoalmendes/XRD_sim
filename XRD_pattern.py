@@ -111,9 +111,17 @@ def compute_model_intensities(models, cell_params, strain_tensor,
             I = calc_intensity.I_hkl(twin_bulks, arr, recip,
                                      twin_angles, twin_pops, rot_mats)
             I = I.reshape(len(var1_range), len(var2_range))
-            # zero center
+            # Define the width w (e.g., w = 5)
+            w = 10
+
+            # Find the indices closest to zero in var1_range and var2_range
             hi, ki = np.argmin(np.abs(var1_range)), np.argmin(np.abs(var2_range))
-            I[max(0,hi-2):hi+3, max(0,ki-2):ki+3] = 0
+
+            # Calculate half the width for centering the square
+            half_w = w // 2
+
+            # Zero out a square of width w centered at (hi, ki)
+            I[max(0, hi - half_w):hi + half_w + 1, max(0, ki - half_w):ki + half_w + 1] = 0
             I = gaussian_filter(I, sigma=1.0)
             I /= np.max(I)
             model_dict[val] = I
@@ -162,7 +170,7 @@ alpha, beta, gamma = 90, 90, 90
 cell_params = (a, b, c, alpha, beta, gamma)
 
 # Input paremeters for computation
-bulk_dimensions = (4, 4, 3)
+bulk_dimensions = (4, 4, 4)
 # For now taking out 90 degrees to line up correctly; easy and lazy solution
 twin_angles, twin_pops = [-90, -30, 30], [np.float64(.33), np.float64(.33), np.float64(.33)]
 
@@ -183,7 +191,7 @@ models = structure_models.models
 x_vals = np.arange(-1,1,0.05)   # H
 y_vals = np.arange(-1,1,0.05)   # L
 fixed = 'l'
-fixed_vals = [0.45]
+fixed_vals = [0.0, 0.5]
 
 refs = compute_reference_intensities(structure, bulk_dimensions,
                                      x_vals, y_vals,

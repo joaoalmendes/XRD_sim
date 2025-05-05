@@ -28,10 +28,9 @@ def unit_cell(cell_params, formula, input_positions):
 def in_plane_bulk(model, cell_params, formula, in_plane_repeats, N_layers):
     """Create a single in-plane bulk (one layer) by repeating a model."""
     a, b, c, alpha, beta, gamma = cell_params
-    #if N_layers == 4:
-    #    c *= 2
     if model == structure_models.model_3:
-        b = a/2
+        b /= 2
+        pass
     cell_matrix = cellpar_to_cell([a, b, c, alpha, beta, gamma])
     positions = model_positions_to_ASE_positions(model)
     unit_cell = Atoms(formula, positions=np.dot(positions, cell_matrix), cell=cell_matrix, pbc=True)
