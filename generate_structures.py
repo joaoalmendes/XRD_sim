@@ -40,90 +40,77 @@ def in_plane_bulk(model, cell_params, formula, in_plane_repeats, N_layers):
     
     return bulk_layer
 
-def DoubleLayered_unit_cell(layer_1, layer_2, interlayer_shift=None):
-    """Creates a new unit cell with two stacked layers, applying an interlayer shift."""
-    
-    # Make copies to avoid modifying original layers
-    layer_1 = layer_1.copy()
-    layer_2 = layer_2.copy()
-
-    # Apply interlayer shift to layer_2 if specified
-    if interlayer_shift:
-        dx, dy = interlayer_shift
-        layer_2.positions[:, 0] += dx
-        layer_2.positions[:, 1] += dy
-
-    # Stack layer_2 on top of layer_1
-    layer_2.positions[:, 2] += layer_1.cell[2, 2]  # Shift by c-axis value
-    
-    # Combine both layers into a single Atoms object
-    two_layer_unit = layer_1 + layer_2  # ASE allows adding Atoms objects
-    
-    # Update the unit cell height to fit both layers
-    new_cell = layer_1.cell.copy()
-    new_cell[2, 2] *= 2  # Double the c-axis length
-    two_layer_unit.set_cell(new_cell)
-    
-    return two_layer_unit
-
-def QuadrupledLayered_unit_cell(layer_1, layer_2, layer_3, layer_4, interlayer_shifts=None):
-    """Creates a new unit cell with four stacked layers, applying interlayer shifts if specified.
-    
-    Parameters:
-    - layer_1, layer_2, layer_3, layer_4: ASE Atoms objects for the four layers
-    - interlayer_shifts: List of (dx, dy) shifts for layers 2, 3, and 4 relative to the previous one
+def build_multi_layer_unit(layer_1, layer_2, N_layers, cell_params, shift_vectors=None):    
     """
+    Builds a multilayer ASE Atoms object by alternating two layers and applying shifts per 2-layer block.
 
-    # Make copies to avoid modifying the original layers
-    layers = [layer_1.copy(), layer_2.copy(), layer_3.copy(), layer_4.copy()]
+    Parameters:
+    - layer_1: ASE Atoms object (first type of layer)
+    - layer_2: ASE Atoms object (second type of layer)
+    - N_layers: Total number of layers (must be even)
+    - cell_params: Tuple of (a, b, c) cell dimensions
+    - shift_vectors: Optional list of (dx, dy) shift tuples per 2-layer block, relative to (a, b)
 
-    # Default shifts if not provided
-    if interlayer_shifts is None:
-        interlayer_shifts = [(0, 0), (0, 0), (0, 0)]  # No shift by default
+    Returns:
+    - ASE Atoms object containing the full stacked structure.
+    """
+    if N_layers % 2 != 0:
+        raise ValueError("N_layers must be even.")
 
-    if len(interlayer_shifts) != 3:
-        raise ValueError("interlayer_shifts must be a list of 3 (dx, dy) tuples.")
+    a, b, c, alpha, beta, gamma = cell_params
+    dz = layer_1.cell[2, 2]  # assumes all layers have same thickness
 
-    # Apply interlayer shifts to layers 2, 3, and 4
-    for i, shift in enumerate(interlayer_shifts):
-        dx, dy = shift
-        layers[i + 1].positions[:, 0] += dx  # Shift in x
-        layers[i + 1].positions[:, 1] += dy  # Shift in y
+    num_blocks = N_layers // 2
+    if shift_vectors is None:
+        shift_vectors = [(0.0, 0.0)] * num_blocks
 
-    # Correctly stack layers along the c-axis
-    for i in range(1, 4):  # Start from layer 2, shifting based on the previous one
-        layers[i].positions[:, 2] += i * layers[0].cell[2, 2]  # Ensure proper stacking
+    if len(shift_vectors) != num_blocks:
+        raise ValueError("shift_vectors must have length N_layers // 2")
 
-    # Combine all four layers into a single Atoms object
-    four_layer_unit = sum(layers, Atoms())
+    full_layers = []
+    for i in range(N_layers):
+        is_odd = (i % 2 == 1)
+        base_layer = layer_1.copy() if not is_odd else layer_2.copy()
 
-    # Update the unit cell height to fit four layers
-    new_cell = layers[0].cell.copy()
-    new_cell[2, 2] *= 4  # Correctly increase the c-axis length
-    four_layer_unit.set_cell(new_cell)
+        block_index = i // 2
+        dx, dy = shift_vectors[block_index] if is_odd else (0.0, 0.0)
 
-    return four_layer_unit
+        base_layer.positions[:, 0] += dx * a
+        base_layer.positions[:, 1] += dy * b
+        base_layer.positions[:, 2] += i * dz
+
+        full_layers.append(base_layer)
+
+    full_structure = sum(full_layers, Atoms())
+
+    new_cell = layer_1.cell.copy()
+    new_cell[2, 2] = dz * N_layers
+    full_structure.set_cell(new_cell)
+
+    return full_structure
 
 def build_full_bulk(unit_cell, num_repeats):
     """Creates the full bulk structure by repeating the two-layer unit cell in the z-direction."""
     return unit_cell.repeat((1, 1, num_repeats[2]))
 
-def generate_bulk(cell_params, formula, bulk_dimensions, model1, model2, shift = -0.5, N_layers=4):
+def generate_bulk(cell_params, formula, bulk_dimensions, model1, model2, shift = 0.5, N_layers=8):
     """Helper function to generate a bulk structure for a given strained unit cell."""
     layer_1 = in_plane_bulk(model1, cell_params, formula, bulk_dimensions, N_layers)
     layer_2 = in_plane_bulk(model2, cell_params, formula, bulk_dimensions, N_layers)
 
-    if model1 == structure_models.model_3:
-        N_layers = 2
+    shift_vectors = [(shift , 0.0), 
+                    (-1 * shift , 0.0), 
+                     (0.0 , shift),
+                     (0.0 , -1 * shift),]
 
-    if N_layers == 2:
-        interlayer_shift = (shift * cell_params[0], 0.0 * cell_params[1])  # Adjust shift based on a
-        two_layer_cell = DoubleLayered_unit_cell(layer_1, layer_2, interlayer_shift)
-        full_bulk = build_full_bulk(two_layer_cell, bulk_dimensions)
-    if N_layers == 4:
-        interlayer_shift = [(0.0 * cell_params[0], shift * cell_params[1]), (0.0 * cell_params[0], 0.0 * cell_params[1]), (0.0 * cell_params[0], shift * cell_params[1])]
-        four_layer_cell = QuadrupledLayered_unit_cell(layer_1, layer_2, layer_2, layer_2, interlayer_shift)
-        full_bulk = build_full_bulk(four_layer_cell, bulk_dimensions)
+    if model1 == structure_models.model_3:
+        N_layers = 4
+
+        shift_vectors = [(shift , 0.0), 
+                        (-1 * shift , 0.0)]
+    
+    layered_cell = build_multi_layer_unit(layer_1, layer_2, N_layers=N_layers, cell_params=cell_params, shift_vectors=shift_vectors)
+    full_bulk = build_full_bulk(layered_cell, bulk_dimensions)
 
     return full_bulk
 

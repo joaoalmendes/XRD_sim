@@ -105,7 +105,7 @@ model_3 = {
 }
 
 models = [model_1, model_2, model_3]
-
+model_names = ['Tri-H', 'SoD', 'Stripe']
 # Given the model return the formula as a string to use as input with ASE.Atoms functions
 def get_formula(model):
     formula = ""
