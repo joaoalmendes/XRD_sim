@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from scipy.ndimage import gaussian_filter
 from ase.io import read
 import structure_models, generate_structures, strain, calc_intensity
-
+# https://wiki.fysik.dtu.dk/ase/ase/xrdebye.html
 
 def compute_reference_intensities(structure, bulk_dims,
                                  var1_range, var2_range,
@@ -60,8 +60,20 @@ def compute_reference_intensities(structure, bulk_dims,
                                  twin_fractions=[twin_pops[0]]*len(twin_pops),
                                  rotation_matrices=rot_mats)
         I = I.reshape(len(var1_range), len(var2_range))
+        # Define the width w (e.g., w = 5)
+        w = 10
+
+        # Find the indices closest to zero in var1_range and var2_range
+        hi, ki = np.argmin(np.abs(var1_range)), np.argmin(np.abs(var2_range))
+
+        # Calculate half the width for centering the square
+        half_w = w // 2
+
+        # Zero out a square of width w centered at (hi, ki)
+        I[max(0, hi - half_w):hi + half_w + 1, max(0, ki - half_w):ki + half_w + 1] = 0
         I = gaussian_filter(I, sigma=1.0)
-        refs[val] = I / np.max(I)
+        I /= np.max(I)
+        refs[val] = I
 
     return refs
 
@@ -132,7 +144,7 @@ def compute_model_intensities(models, cell_params, strain_tensor,
 
 def plot_intensity_maps(intensities, var1_range, var2_range,
                         fixed_idx, fixed_vals,
-                        ref_model=None):
+                        ref_diff_model=None, ref_original_structure=None):
     """
     First plots absolute maps (viridis) for each model & cut,
     then plots difference maps (RdBu) against ref_model.
@@ -141,7 +153,15 @@ def plot_intensity_maps(intensities, var1_range, var2_range,
     # Absolute maps
     for val in fixed_vals:
         for model, data in intensities.items():
-            I = data[val]
+            if ref_original_structure:
+                #I = data[val] - ref_original_structure[val]    # with negative values
+                #I = np.maximum(data[val] - ref_original_structure[val], 0)  # without negative values
+                I = ref_original_structure[val] # plot one structure only
+                I = gaussian_filter(I, sigma=1.0)
+                I /= np.max(I)
+                data[val] = I
+            else:
+                I = data[val]
             fig, ax = plt.subplots(figsize=(6,6))
             c = ax.pcolormesh(v1_grid, v2_grid, I, shading='auto', cmap='viridis')
             fig.colorbar(c, ax=ax, label='Intensity')
@@ -150,17 +170,17 @@ def plot_intensity_maps(intensities, var1_range, var2_range,
             ax.set_title(f"{model}: {fixed_idx}={val}")
             plt.show()
     # Difference maps
-    if ref_model:
+    if ref_diff_model:
         for val in fixed_vals:
             for model, data in intensities.items():
-                I_diff = data[val] - intensities[ref_model][val]
+                I_diff = data[val] - intensities[ref_diff_model][val]
                 fig, ax = plt.subplots(figsize=(6,6))
                 norm = plt.Normalize(vmin=I_diff.min(), vmax=I_diff.max())
                 c = ax.pcolormesh(v1_grid, v2_grid, I_diff, shading='auto', cmap='RdBu', norm=norm)
                 fig.colorbar(c, ax=ax, label='Intensity Difference')
                 ax.set_xlabel({'h':'k','k':'h','l':'h'}[fixed_idx])
                 ax.set_ylabel({'h':'l','k':'l','l':'k'}[fixed_idx])
-                ax.set_title(f"{model} - {ref_model}: {fixed_idx}={val}")
+                ax.set_title(f"{model} - {ref_diff_model}: {fixed_idx}={val}")
                 plt.show()
 
 # Lattice parameters for input
@@ -170,7 +190,7 @@ alpha, beta, gamma = 90, 90, 90
 cell_params = (a, b, c, alpha, beta, gamma)
 
 # Input paremeters for computation
-bulk_dimensions = (4, 4, 4)
+bulk_dimensions = (5, 5, 5)
 # For now taking out 90 degrees to line up correctly; easy and lazy solution
 twin_angles, twin_pops = [-90, -30, 30], [np.float64(.33), np.float64(.33), np.float64(.33)]
 
@@ -187,16 +207,20 @@ bulk_original = structure.repeat(bulk_dimensions)
 
 models = structure_models.models
 
-# Example: constant K cuts (H–L maps)
-x_vals = np.arange(-1,1,0.05)   # H
-y_vals = np.arange(-1,1,0.05)   # L
-fixed = 'l'
+from ase.build import bulk
+
+# Create a silicon bulk crystal (diamond structure)
+si_bulk = bulk('Si', crystalstructure='diamond', a=5.431, cubic=True)
+
+x_vals = np.arange(-1,1,0.05)
+y_vals = np.arange(-1,1,0.05)
+fixed = 'k'
 fixed_vals = [0.0, 0.5]
 
-refs = compute_reference_intensities(structure, bulk_dimensions,
+reference_structure = compute_reference_intensities(si_bulk, (5,5,5),
                                      x_vals, y_vals,
                                      fixed, fixed_vals,
-                                     twin_angles, twin_pops,
+                                     [-90,-90,-90], [1.0,0.0,0.0],
                                      cell_params, strain_tensor)
 
 ints = compute_model_intensities(models, cell_params, strain_tensor,
@@ -208,7 +232,8 @@ ints = compute_model_intensities(models, cell_params, strain_tensor,
 plot_intensity_maps(
     ints, x_vals, y_vals,
     fixed, fixed_vals,
-    ref_model=list(ints.keys())[0]  # e.g. 'Tri-H'
+    ref_diff_model=list(ints.keys())[0],  # e.g. 'Tri-H'
+    ref_original_structure=reference_structure
 )
 
 
