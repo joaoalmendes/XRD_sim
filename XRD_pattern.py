@@ -1,7 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.ndimage import gaussian_filter
-from ase.io import read
+from ase.io import read, write
+from ase.visualize import view
 import structure_models, generate_structures, strain, calc_intensity
 # https://wiki.fysik.dtu.dk/ase/ase/xrdebye.html
 
@@ -214,7 +215,7 @@ si_bulk = bulk('Si', crystalstructure='diamond', a=5.431, cubic=True)
 
 x_vals = np.arange(-1,1,0.05)
 y_vals = np.arange(-1,1,0.05)
-fixed = 'k'
+fixed = 'l'
 fixed_vals = [0.0, 0.5]
 
 reference_structure = compute_reference_intensities(si_bulk, (5,5,5),
@@ -233,7 +234,7 @@ plot_intensity_maps(
     ints, x_vals, y_vals,
     fixed, fixed_vals,
     ref_diff_model=list(ints.keys())[0],  # e.g. 'Tri-H'
-    ref_original_structure=reference_structure
+    ref_original_structure=None
 )
 
 
