@@ -56,7 +56,7 @@ def build_multi_layer_unit(layer_1, layer_2, N_layers, cell_params, shift_vector
         layer_A.translate((0.0, 0.0, 2*i * interlayer_spacing))
         layers.append(layer_A)
 
-        layer_B = layer_1.copy()
+        layer_B = layer_2.copy()
         # compute real‐space in-plane shift = fx * a_vec + fy * b_vec
         shift_xy = dx * np.array([a, 0.0, 0.0]) + dy * np.array([0.0, b, 0.0])
         # add z-offset = i * interlayer
@@ -79,7 +79,7 @@ def build_full_bulk(unit_cell, num_repeats):
     """Creates the full bulk structure by repeating the two-layer unit cell in the z-direction."""
     return unit_cell.repeat(num_repeats)
 
-def generate_bulk(cell_params, formula, bulk_dimensions, model1, model2, shift = 0.5, N_layers=8):
+def generate_bulk(cell_params, formula, bulk_dimensions, model1, model2=structure_models.model_2, shift = 0.5, N_layers=8):
     """Helper function to generate a bulk structure for a given strained unit cell."""
     layer_1 = layer(model1, cell_params, formula)
     layer_2 = layer(model2, cell_params, formula)
