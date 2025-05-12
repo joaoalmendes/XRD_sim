@@ -6,11 +6,10 @@ from ase.visualize import view
 import structure_models, generate_structures, strain, calc_intensity
 # https://wiki.fysik.dtu.dk/ase/ase/xrdebye.html
 
-def compute_reference_intensities(structure, bulk_dims,
+def compute_reference_intensities(structure,
                                  var1_range, var2_range,
                                  fixed_idx, fixed_vals,
                                  twin_angles, twin_pops,
-                                 cell_params=None,
                                  strain_tensor=None):
     """
     Computes normalized reference intensities for an un-twinned bulk structure.
@@ -156,8 +155,8 @@ def plot_intensity_maps(intensities, var1_range, var2_range,
         for model, data in intensities.items():
             if ref_original_structure:
                 #I = data[val] - ref_original_structure[val]    # with negative values
-                #I = np.maximum(data[val] - ref_original_structure[val], 0)  # without negative values
-                I = ref_original_structure[val] # plot one structure only
+                I = np.maximum(data[val] - ref_original_structure[val], 0)  # without negative values
+                #I = ref_original_structure[val] # plot one structure only
                 I = gaussian_filter(I, sigma=1.0)
                 I /= np.max(I)
                 data[val] = I
@@ -202,7 +201,7 @@ strain_tensor = np.array([
 ])
 
 structure = read('structures/CsV3Sb5.cif')
-bulk_original = structure.repeat(bulk_dimensions)
+bulk_original = structure.repeat((3,3,3))
 #view(bulk_original)
 # Precompute reference intensities for original structure for each l-cut
 
@@ -218,11 +217,11 @@ y_vals = np.arange(-1,1,0.05)
 fixed = 'l'
 fixed_vals = [0.0, 0.5]
 
-reference_structure = compute_reference_intensities(si_bulk, (5,5,5),
+reference_structure = compute_reference_intensities(bulk_original,
                                      x_vals, y_vals,
                                      fixed, fixed_vals,
                                      [-90,-90,-90], [1.0,0.0,0.0],
-                                     cell_params, strain_tensor)
+                                     strain_tensor)
 
 ints = compute_model_intensities(models, cell_params, strain_tensor,
                                  bulk_dimensions, x_vals, y_vals,
@@ -234,7 +233,7 @@ plot_intensity_maps(
     ints, x_vals, y_vals,
     fixed, fixed_vals,
     ref_diff_model=list(ints.keys())[0],  # e.g. 'Tri-H'
-    ref_original_structure=None
+    ref_original_structure=reference_structure
 )
 
 

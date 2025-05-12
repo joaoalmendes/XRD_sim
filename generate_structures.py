@@ -20,9 +20,6 @@ def model_positions_to_ASE_positions(model_positions):
 def layer(model, cell_params, formula):
     """Create a single in-plane bulk (one layer) by repeating a model."""
     a, b, c, alpha, beta, gamma = cell_params
-    if model == structure_models.model_3:
-        b /= 2
-        pass
     cell_matrix = cellpar_to_cell([a, b, c, alpha, beta, gamma])
     positions = model_positions_to_ASE_positions(model)
     cartesian_positions = np.dot(positions, cell_matrix.T)  # Correct axis order
