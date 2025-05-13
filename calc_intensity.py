@@ -102,9 +102,11 @@ def I_hkl(twin_bulks, hkl_array, r_lattice, twin_angles, twin_fractions, rotatio
 
     for twin_idx, (twin_bulk, twin_angle, twin_fraction) in enumerate(zip(twin_bulks, twin_angles, twin_fractions)):
         # Rotate reciprocal lattice (uses precomputed matrices)
-        hkl_twin = rotate_reciprocal_lattice(hkl_array, twin_angle, rotation_matrices)
+        hkl_twin = rotate_reciprocal_lattice(hkl_array, 0, rotation_matrices)
         G_vectors = np.dot(hkl_twin, r_lattice.T)  # Compute scattering vectors
         q_values = np.linalg.norm(G_vectors, axis=1)  # Compute |G|
+
+        twin_bulk.rotate(twin_angle, 'z')
 
         # Prepare batch arguments
         batch_args = [

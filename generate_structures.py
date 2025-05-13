@@ -86,11 +86,11 @@ def generate_bulk(cell_params, formula, bulk_dimensions, model1, model2=structur
                      (0.0 , shift),
                      (0.0 , -1 * shift),]
 
-    if model1 == structure_models.model_3:
+    """if model1 == structure_models.model_3:
         N_layers = 4
 
         shift_vectors = [(shift , 0.0), 
-                        (-1 * shift , 0.0)]
+                        (-1 * shift , 0.0)]"""
     
     layered_cell = build_multi_layer_unit(layer_1, layer_2, N_layers=N_layers, cell_params=cell_params, shift_vectors=shift_vectors)
     names = structure_models.model_names

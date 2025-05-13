@@ -190,9 +190,9 @@ alpha, beta, gamma = 90, 90, 90
 cell_params = (a, b, c, alpha, beta, gamma)
 
 # Input paremeters for computation
-bulk_dimensions = (5, 5, 5)
+bulk_dimensions = (6, 6, 6)
 # For now taking out 90 degrees to line up correctly; easy and lazy solution
-twin_angles, twin_pops = [-90, -30, 30], [np.float64(.33), np.float64(.33), np.float64(.33)]
+twin_angles, twin_pops = [0, 120, 240], [np.float64(.33), np.float64(.33), np.float64(.33)]
 
 strain_tensor = np.array([
     [-0.0, 0.0, 0.0],  # ε_xx, ε_xy, ε_xz
@@ -217,11 +217,11 @@ y_vals = np.arange(-1,1,0.05)
 fixed = 'l'
 fixed_vals = [0.0, 0.5]
 
-reference_structure = compute_reference_intensities(bulk_original,
+"""reference_structure = compute_reference_intensities(bulk_original,
                                      x_vals, y_vals,
                                      fixed, fixed_vals,
                                      [-90,-90,-90], [1.0,0.0,0.0],
-                                     strain_tensor)
+                                     strain_tensor)"""
 
 ints = compute_model_intensities(models, cell_params, strain_tensor,
                                  bulk_dimensions, x_vals, y_vals,
@@ -233,7 +233,7 @@ plot_intensity_maps(
     ints, x_vals, y_vals,
     fixed, fixed_vals,
     ref_diff_model=list(ints.keys())[0],  # e.g. 'Tri-H'
-    ref_original_structure=reference_structure
+    ref_original_structure=None
 )
 
 
